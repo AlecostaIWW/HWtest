@@ -1,0 +1,151 @@
+
+<style>
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: var(--color-background-secondary); padding: 8px 10px; text-align: left; font-weight: 500; font-size: 12px; color: var(--color-text-secondary); border-bottom: 0.5px solid var(--color-border-tertiary); }
+  td { padding: 7px 10px; border-bottom: 0.5px solid var(--color-border-tertiary); color: var(--color-text-primary); }
+  tr:hover td { background: var(--color-background-secondary); }
+  .rank { font-weight: 500; color: var(--color-text-secondary); }
+  .city { font-weight: 500; }
+  .surprise { background: #EEEDFE; color: #3C3489; font-size: 11px; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
+  .top5 td { background: #F8F7FF; }
+  .filters { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .filters label { font-size: 13px; color: var(--color-text-secondary); }
+  select { font-size: 13px; padding: 4px 8px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-primary); }
+  .metric-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+  .mc { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 12px; }
+  .mc-label { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 4px; }
+  .mc-value { font-size: 20px; font-weight: 500; color: var(--color-text-primary); }
+  .note { font-size: 11px; color: var(--color-text-tertiary); margin-top: 12px; }
+  .tab-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tab { padding: 6px 14px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); cursor: pointer; font-size: 13px; color: var(--color-text-secondary); }
+  .tab.active { background: #9D4EDD; color: white; border-color: #9D4EDD; }
+</style>
+
+<div style="padding: 1rem 0;">
+
+<div class="tab-row">
+  <button class="tab active" onclick="setTab('totale')">Totale 6 mesi</button>
+  <button class="tab" onclick="setTab('mensile')">Per mese</button>
+</div>
+
+<div class="metric-cards">
+  <div class="mc"><div class="mc-label">Crediti totali (6 mesi)</div><div class="mc-value">2.847.400</div></div>
+  <div class="mc"><div class="mc-label">Utenti attivi unici</div><div class="mc-value">18.320</div></div>
+  <div class="mc"><div class="mc-label">Media crediti/utente</div><div class="mc-value">155</div></div>
+  <div class="mc"><div class="mc-label">Città monitorate</div><div class="mc-value">20</div></div>
+</div>
+
+<div class="filters">
+  <label>Ordina per:</label>
+  <select onchange="sortTable(this.value)">
+    <option value="crediti">Crediti totali</option>
+    <option value="utenti">Utenti attivi</option>
+    <option value="media_utente">Media per utente</option>
+    <option value="pro_capite">Crediti per 1.000 abitanti</option>
+  </select>
+</div>
+
+<div id="table-container"></div>
+<p class="note">* Dati simulati a scopo strategico — da adattare con dati reali dal backend. Popolazione fonte ISTAT 2023.</p>
+</div>
+
+<script>
+const cities = [
+  { rank:1, city:"Milano", region:"Lombardia", pop:1371498, crediti:580000, utenti:3800, surprise:false },
+  { rank:2, city:"Roma", region:"Lazio", pop:2860009, crediti:490000, utenti:3200, surprise:false },
+  { rank:3, city:"Torino", region:"Piemonte", pop:854199, crediti:210000, utenti:1400, surprise:false },
+  { rank:4, city:"Bergamo", region:"Lombardia", pop:120287, crediti:185000, utenti:1100, surprise:true },
+  { rank:5, city:"Bologna", region:"Emilia-R.", pop:416490, crediti:162000, utenti:1050, surprise:false },
+  { rank:6, city:"Firenze", region:"Toscana", pop:361169, crediti:138000, utenti:920, surprise:false },
+  { rank:7, city:"Napoli", region:"Campania", pop:909048, crediti:124000, utenti:850, surprise:false },
+  { rank:8, city:"Venezia", region:"Veneto", pop:248701, crediti:108000, utenti:710, surprise:false },
+  { rank:9, city:"Padova", region:"Veneto", pop:212020, crediti:95000, utenti:640, surprise:false },
+  { rank:10, city:"Verona", region:"Veneto", pop:258031, crediti:88000, utenti:600, surprise:false },
+  { rank:11, city:"Genova", region:"Liguria", pop:566133, crediti:82000, utenti:540, surprise:false },
+  { rank:12, city:"Bari", region:"Puglia", pop:315000, crediti:74000, utenti:490, surprise:false },
+  { rank:13, city:"Brescia", region:"Lombardia", pop:197292, crediti:68000, utenti:460, surprise:false },
+  { rank:14, city:"Catania", region:"Sicilia", pop:298457, crediti:60000, utenti:400, surprise:false },
+  { rank:15, city:"Trieste", region:"FVG", pop:200607, crediti:55000, utenti:360, surprise:false },
+  { rank:16, city:"Modena", region:"Emilia-R.", pop:185200, crediti:49000, utenti:320, surprise:false },
+  { rank:17, city:"Palermo", region:"Sicilia", pop:637812, crediti:45000, utenti:300, surprise:false },
+  { rank:18, city:"Parma", region:"Emilia-R.", pop:196518, crediti:41000, utenti:270, surprise:false },
+  { rank:19, city:"Perugia", region:"Umbria", pop:165683, crediti:36000, utenti:235, surprise:false },
+  { rank:20, city:"Cagliari", region:"Sardegna", pop:149017, crediti:29400, utenti:190, surprise:false },
+];
+
+const monthly = [
+  { month:"Ago 2024", mult: [0.88,0.92,0.85,0.90,0.87,0.86,0.84,0.91,0.89,0.88,0.90,0.87,0.86,0.85,0.88,0.87,0.84,0.86,0.85,0.83] },
+  { month:"Set 2024", mult: [0.93,0.95,0.91,0.94,0.92,0.93,0.90,0.94,0.92,0.91,0.93,0.90,0.91,0.89,0.92,0.91,0.88,0.90,0.89,0.87] },
+  { month:"Ott 2024", mult: [1.02,1.00,0.99,1.01,1.00,1.01,0.98,1.00,0.99,0.98,1.00,0.97,0.98,0.96,0.99,0.98,0.95,0.97,0.96,0.94] },
+  { month:"Nov 2024", mult: [1.08,1.06,1.04,1.07,1.05,1.06,1.03,1.05,1.04,1.03,1.05,1.02,1.03,1.01,1.04,1.03,1.00,1.02,1.01,0.99] },
+  { month:"Dic 2024", mult: [1.15,1.12,1.11,1.14,1.12,1.13,1.10,1.12,1.11,1.10,1.12,1.09,1.10,1.08,1.11,1.10,1.07,1.09,1.08,1.06] },
+  { month:"Gen 2025", mult: [0.94,0.95,0.90,0.93,0.94,0.91,0.95,0.97,0.93,0.90,0.99,0.90,0.93,0.95,0.92,0.90,0.93,0.91,0.90,0.88] },
+];
+
+let currentSort = "crediti";
+let currentTab = "totale";
+
+function setTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab')[tab === 'totale' ? 0 : 1].classList.add('active');
+  renderTable();
+}
+
+function sortTable(val) { currentSort = val; renderTable(); }
+
+function fmt(n) { return Math.round(n).toLocaleString('it-IT'); }
+
+function renderTable() {
+  const container = document.getElementById('table-container');
+  
+  if (currentTab === 'mensile') {
+    let html = '<div style="overflow-x:auto"><table><thead><tr><th>Città</th>';
+    monthly.forEach(m => html += `<th>${m.month}</th>`);
+    html += '</tr></thead><tbody>';
+    cities.forEach((c,i) => {
+      html += `<tr><td class="city">${c.city}${c.surprise ? '<span class="surprise">sorpresa</span>' : ''}</td>`;
+      monthly.forEach(m => {
+        const val = Math.round(c.crediti * m.mult[i] / 6);
+        html += `<td>${fmt(val)}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+    return;
+  }
+
+  const data = [...cities].map(c => ({
+    ...c,
+    media_utente: Math.round(c.crediti / c.utenti),
+    pro_capite: Math.round(c.crediti / c.pop * 1000)
+  }));
+
+  data.sort((a,b) => b[currentSort] - a[currentSort]);
+
+  let html = `<table><thead><tr>
+    <th>#</th><th>Città</th><th>Regione</th>
+    <th>Crediti totali</th><th>Utenti attivi</th>
+    <th>Media/utente</th><th>Ogni 1.000 ab.</th>
+  </tr></thead><tbody>`;
+
+  data.forEach((c,i) => {
+    const isTop5 = i < 5;
+    html += `<tr class="${isTop5 ? 'top5' : ''}">
+      <td class="rank">${i+1}</td>
+      <td class="city">${c.city}${c.surprise ? '<span class="surprise">sorpresa</span>' : ''}</td>
+      <td style="color:var(--color-text-secondary);font-size:12px">${c.region}</td>
+      <td>${fmt(c.crediti)}</td>
+      <td>${fmt(c.utenti)}</td>
+      <td>${fmt(c.media_utente)}</td>
+      <td>${fmt(c.pro_capite)}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+renderTable();
+</script>
